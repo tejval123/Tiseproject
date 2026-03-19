@@ -1,159 +1,187 @@
-# Turborepo starter
+# TISE — Task Intelligence Scheduling Engine
 
-This Turborepo starter is maintained by the Turborepo core team.
+TISE is an intelligent task scheduling application that predicts the consequences of adding tasks to your schedule before you commit. It combines a **consequence engine**, **time banking**, and **automatic rebalancing** to help you maintain a realistic schedule — and recover gracefully when things slip.
 
-## Using this example
+## Why TISE?
 
-Run the following command:
+Most task managers let you pile on work without warning. TISE flips this: when you add a task, it tells you *exactly* what will happen to your existing schedule — which tasks will slip, how much buffer you'll consume, and whether you're heading toward overload. You decide with full visibility.
 
-```sh
-npx create-turbo@latest
+## Key Features
+
+### Consequence Engine
+Before committing a new task, TISE calculates:
+- **Adjusted Effort** — estimated time adjusted by task complexity and your personal velocity
+- **Impact Analysis** — which existing tasks stay on time and which will slip (and by how many days)
+- **Deep Work Protection** — flags when deep work blocks are at risk
+- **Suggested Dates** — proposes the earliest feasible deadline if yours is too tight
+- **Overload Warnings** — alerts when 3+ consecutive days exceed capacity
+
+### Personal Execution Velocity (PEV)
+TISE learns how you estimate vs. how long tasks actually take. After enough data (10 tasks, 8 sessions, 2+ days), it calibrates all future scheduling to your real pace. No more optimistic planning.
+
+### Time Bank
+- **Earn credits** by finishing tasks early (up to 15 min per task)
+- **Spend credits** when tasks overrun, absorbing the impact without disrupting your schedule
+- When the bank runs dry mid-overrun, slip detection kicks in
+
+### Slip Detection & Rebalancing
+A 3-level recovery system:
+| Level | Trigger | Strategy |
+|-------|---------|----------|
+| 1 | Minor slip | Time Bank absorbs it — no moves needed |
+| 2 | Moderate slip | Reorder today's remaining tasks |
+| 3 | Major slip | Repack schedule across the next 14 days |
+
+Rebalancing respects constraints: pinned tasks don't move, near-term blocks (next 12 hours) are locked, and at most 30% of blocks (or 3 tasks) are relocated.
+
+### Invisible Capacity Buffer
+Your declared availability is multiplied by 0.75 internally. This 25% hidden buffer accounts for meetings, interruptions, and context switching — so your schedule stays realistic without you having to think about it.
+
+### System Calibration Modes
+TISE adapts over time through four modes:
+
+`warm_start` → `calibration` → `personalized` → `autopilot`
+
+As you log more sessions, the system transitions from defaults to fully personalized scheduling.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | [Next.js 16](https://nextjs.org/) (App Router) |
+| Language | TypeScript 5.9 |
+| UI | React 19, TailwindCSS 4 |
+| Database | [Supabase](https://supabase.com/) (PostgreSQL + Auth + RLS) |
+| Server State | [TanStack React Query 5](https://tanstack.com/query) |
+| Monorepo | [Turborepo](https://turbo.build/) with npm workspaces |
+| Core Logic | Pure TypeScript library (`@repo/core`) — zero external dependencies |
+
+## Project Structure
+
+```
+tise/
+├── apps/
+│   └── web/                          # Next.js application
+│       ├── app/
+│       │   ├── (app)/dashboard/      # Main dashboard (protected)
+│       │   ├── (app)/onboarding/     # Capacity profile setup
+│       │   ├── (auth)/login/         # Authentication
+│       │   └── api/
+│       │       ├── tasks/            # CRUD for tasks
+│       │       ├── consequence/      # Impact prediction
+│       │       ├── rebalance/        # Slip recovery
+│       │       └── time-sessions/    # Work session logging
+│       ├── components/               # UI components
+│       └── lib/supabase.ts           # DB client setup
+├── packages/
+│   ├── core/                         # Scheduling algorithms (pure TS)
+│   │   ├── consequence-engine.ts     # Impact prediction logic
+│   │   ├── rebalancer.ts            # Multi-level rebalancing
+│   │   ├── pev.ts                   # Personal Execution Velocity
+│   │   ├── time-bank.ts            # Deposit/withdraw logic
+│   │   └── types.ts                 # Domain types & constants
+│   ├── ui/                           # Shared React components
+│   ├── eslint-config/                # ESLint presets
+│   └── typescript-config/            # Shared tsconfig
+└── supabase/
+    └── schema.sql                    # Full database schema (7 tables + RLS)
 ```
 
-## What's inside?
+## Database Schema
 
-This Turborepo includes the following packages/apps:
+| Table | Purpose |
+|-------|---------|
+| `capacity_profiles` | User availability settings and system mode |
+| `tasks` | Task definitions with type, effort, deadline, status |
+| `schedule_blocks` | Time slots assigned to tasks |
+| `day_capacities` | Daily capacity tracking (declared vs effective) |
+| `time_bank` | Daily earned/spent buffer minutes |
+| `time_sessions` | Actual work logged (estimated vs actual) |
+| `rebalance_plans` | Generated recovery plans with move history |
 
-### Apps and Packages
+All tables use Row Level Security — each user can only access their own data.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Getting Started
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### Prerequisites
 
-### Utilities
+- Node.js >= 18
+- npm 10+
+- A [Supabase](https://supabase.com/) project
 
-This Turborepo has some additional tools already setup for you:
+### Setup
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+1. **Clone the repository**
+   ```sh
+   git clone https://github.com/<your-username>/tise.git
+   cd tise
+   ```
 
-### Build
+2. **Install dependencies**
+   ```sh
+   npm install
+   ```
 
-To build all apps and packages, run the following command:
+3. **Configure environment variables**
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+   Create `apps/web/.env.local`:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   ```
 
-```sh
-cd my-turborepo
-turbo build
-```
+4. **Set up the database**
 
-Without global `turbo`, use your package manager:
+   Run the SQL in `supabase/schema.sql` against your Supabase project (via the SQL Editor in the Supabase dashboard or the CLI).
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+5. **Start the development server**
+   ```sh
+   npm run dev
+   ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+   The app runs at [http://localhost:3000](http://localhost:3000).
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+### Other Commands
 
 ```sh
-cd my-turborepo
-turbo dev
+npm run build         # Build all apps and packages
+npm run lint          # Lint all code
+npm run format        # Format with Prettier
+npm run check-types   # Type-check all packages
 ```
 
-Without global `turbo`, use your package manager:
+## How It Works
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```
+User adds task → Consequence Engine computes impact
+                        ↓
+        Shows: slipping tasks, buffer cost, suggested date
+                        ↓
+        User commits (accept / adjust / mark flexible)
+                        ↓
+                Task created + scheduled
+                        ↓
+        User logs work session → Time Bank updated
+                        ↓
+        Overrun detected? → Slip score calculated
+                        ↓
+        Level 1: Bank absorbs | Level 2: Day reorder | Level 3: 14-day repack
+                        ↓
+        User reviews & accepts rebalance plan
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## API Routes
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/tasks` | Fetch user's tasks with schedule blocks |
+| `POST` | `/api/tasks` | Create a new task |
+| `POST` | `/api/consequence` | Compute impact of a potential task |
+| `POST` | `/api/rebalance` | Generate a rebalance plan from slip data |
+| `PATCH` | `/api/rebalance` | Accept and apply a rebalance plan |
+| `POST` | `/api/time-sessions` | Log actual work time for a task |
 
-```sh
-turbo dev --filter=web
-```
+## License
 
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+MIT
