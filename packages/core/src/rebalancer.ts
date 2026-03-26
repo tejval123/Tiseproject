@@ -65,14 +65,11 @@ export function runRebalance(input: RebalanceInput): RebalancePlan {
   }
 
   // Cap: move at most 30% of future blocks OR max 3 tasks — whichever is smaller
+  // Guarantee at least 1 move when there are candidates
   const maxMoves = Math.min(
-    Math.floor(candidateBlocks.length * REBALANCE_MAX_MOVE_RATIO),
+    Math.max(1, Math.floor(candidateBlocks.length * REBALANCE_MAX_MOVE_RATIO)),
     REBALANCE_MAX_TASKS
   );
-
-  if (maxMoves === 0) {
-    return { id: planId, userId: blocks[0]?.userId ?? "", triggeredAt: new Date().toISOString(), slipLevel, moves: [], accepted: false };
-  }
 
   // Level 1: Local repair — use Time Bank, no block moves
   if (slipLevel === 1) {
@@ -86,9 +83,9 @@ export function runRebalance(input: RebalanceInput): RebalancePlan {
     };
   }
 
-  // Level 2: Day rebalance — reorder today's remaining tasks
+  // Level 2: Day rebalance — repack across next 3 days
   // Level 3: Horizon rebalance — repack across next 14 days
-  const horizonDate = addDays(today, slipLevel === 3 ? 14 : 0);
+  const horizonDate = addDays(today, slipLevel === 3 ? 14 : 3);
 
   const relevantBlocks = candidateBlocks
     .filter((b) => b.date >= today && b.date <= horizonDate)

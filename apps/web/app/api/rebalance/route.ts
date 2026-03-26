@@ -34,23 +34,25 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   const nowMinute = now.getHours() * 60 + now.getMinutes();
 
-  const [blocksRes, tasksRes, profileRes] = await Promise.all([
+  const [blocksRes, tasksRes, profileRes, bankRes] = await Promise.all([
     supabase.from("schedule_blocks").select("*").eq("user_id", user.id).gte("date", today),
     supabase.from("tasks").select("*").eq("user_id", user.id).not("status", "in", '("completed","cancelled")'),
     supabase.from("capacity_profiles").select("*").eq("user_id", user.id).single(),
+    supabase.from("time_bank").select("date, balance_minutes").eq("user_id", user.id).gte("date", today),
   ]);
 
   const profile = profileRes.data;
   const blocks: ScheduleBlock[] = (blocksRes.data ?? []).map(dbBlockToCore);
   const tasks: Task[] = (tasksRes.data ?? []).map(dbTaskToCore);
 
-  const horizonEnd = addDays(today, slipScore.level === 3 ? 14 : 0);
+  const horizonEnd = addDays(today, slipScore.level === 3 ? 14 : 3);
   const dayCapacities = buildDayCapacities(
     today,
     horizonEnd,
     profile?.weekday_minutes ?? 480,
     profile?.weekend_minutes ?? 120,
-    blocksRes.data ?? []
+    blocksRes.data ?? [],
+    bankRes.data ?? []
   );
 
   const plan = runRebalance({
@@ -157,12 +159,18 @@ function buildDayCapacities(
   to: string,
   weekdayMinutes: number,
   weekendMinutes: number,
-  blocks: Record<string, unknown>[]
+  blocks: Record<string, unknown>[],
+  bankRows: Record<string, unknown>[] = []
 ): DayCapacity[] {
   const blocksByDate = new Map<string, number>();
   for (const b of blocks) {
     const date = b.date as string;
     blocksByDate.set(date, (blocksByDate.get(date) ?? 0) + (b.duration_minutes as number));
+  }
+
+  const bankByDate = new Map<string, number>();
+  for (const b of bankRows) {
+    bankByDate.set(b.date as string, b.balance_minutes as number);
   }
 
   const days: DayCapacity[] = [];
@@ -178,7 +186,7 @@ function buildDayCapacities(
       declaredMinutes: declared,
       effectiveMinutes: Math.floor(declared * EFFECTIVE_CAPACITY_RATIO),
       scheduledMinutes: blocksByDate.get(dateStr) ?? 0,
-      timeBankMinutes: 0,
+      timeBankMinutes: bankByDate.get(dateStr) ?? 0,
     });
     current.setDate(current.getDate() + 1);
   }

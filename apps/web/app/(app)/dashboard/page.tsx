@@ -83,7 +83,11 @@ export default function DashboardPage() {
   async function handleComplete(taskId: string) {
     const auth = await getAuthHeader();
     if (!auth) return;
+    const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("tasks").update({ status: "completed" }).eq("id", taskId);
+    if (user) {
+      await supabase.rpc("increment_completed_task_count", { uid: user.id });
+    }
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: "completed" } : t));
   }
 

@@ -153,6 +153,26 @@ begin
 end;
 $$;
 
+-- ─── RPC: add scheduled minutes to a day_capacity row ─────────────────────────
+create or replace function public.add_scheduled_minutes(uid uuid, target_date date, minutes_to_add int)
+returns void language plpgsql security definer as $$
+begin
+  update public.day_capacities
+  set scheduled_minutes = scheduled_minutes + minutes_to_add
+  where user_id = uid and date = target_date;
+end;
+$$;
+
+-- ─── RPC: increment days_active on capacity_profiles ──────────────────────────
+create or replace function public.increment_days_active(uid uuid)
+returns void language plpgsql security definer as $$
+begin
+  update public.capacity_profiles
+  set days_active = days_active + 1
+  where user_id = uid;
+end;
+$$;
+
 -- ─── Trigger: auto-create capacity_profile on user signup ────────────────────
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer as $$

@@ -20,10 +20,11 @@ export function computePEV(
 ): number {
   const valid = sessions.filter((s) => s.isValid && s.estimatedMinutes > 0);
 
+  // PRD §5.4.3: activate when >=10 tasks OR (>=8 sessions AND >=2 days)
   const thresholdMet =
-    completedTaskCount >= PEV_ACTIVATION_MIN_TASKS &&
-    valid.length >= PEV_ACTIVATION_MIN_SESSIONS &&
-    daysActive >= PEV_ACTIVATION_MIN_DAYS;
+    completedTaskCount >= PEV_ACTIVATION_MIN_TASKS ||
+    (valid.length >= PEV_ACTIVATION_MIN_SESSIONS &&
+      daysActive >= PEV_ACTIVATION_MIN_DAYS);
 
   if (!thresholdMet || valid.length === 0) return DEFAULT_PEV;
 
@@ -51,8 +52,8 @@ export function isPEVCalibrated(
   daysActive: number
 ): boolean {
   return (
-    completedTaskCount >= PEV_ACTIVATION_MIN_TASKS &&
-    sessionCount >= PEV_ACTIVATION_MIN_SESSIONS &&
-    daysActive >= PEV_ACTIVATION_MIN_DAYS
+    completedTaskCount >= PEV_ACTIVATION_MIN_TASKS ||
+    (sessionCount >= PEV_ACTIVATION_MIN_SESSIONS &&
+      daysActive >= PEV_ACTIVATION_MIN_DAYS)
   );
 }
