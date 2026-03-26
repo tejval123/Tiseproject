@@ -38,8 +38,8 @@ export default function DashboardPage() {
   const [systemMode, setSystemMode] = useState<string>("warm_start");
   const [capacityMinutes, setCapacityMinutes] = useState(480);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     const auth = await getAuthHeader();
     if (!auth) { router.push("/login"); return; }
 
@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
     try {
       const [tasksRes, bankRes, profileRes] = await Promise.all([
-        fetch("/api/tasks", { headers: { Authorization: auth } }),
+        fetch("/api/tasks", { headers: { Authorization: auth }, cache: "no-store" }),
         supabase.from("time_bank").select("balance_minutes").eq("date", today).maybeSingle(),
         supabase.from("capacity_profiles").select("system_mode, weekday_minutes, weekend_minutes").maybeSingle(),
       ]);
@@ -55,6 +55,8 @@ export default function DashboardPage() {
       if (tasksRes.ok) {
         const data = await tasksRes.json();
         setTasks(data ?? []);
+      } else {
+        console.error("Tasks API error:", tasksRes.status);
       }
 
       setTimeBankMinutes(bankRes.data?.balance_minutes ?? 0);
@@ -80,7 +82,7 @@ export default function DashboardPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.push("/login"); return; }
-      fetchData();
+      fetchData(true); // show loading skeleton on initial load only
     });
   }, [fetchData, router]);
 
@@ -98,14 +100,17 @@ export default function DashboardPage() {
     }
   }
 
-  function handleTaskAdded() {
+  async function handleTaskAdded() {
     setShowAddModal(false);
-    fetchData();
+    // Wait for modal to unmount before re-fetching to avoid state conflicts
+    await new Promise((r) => setTimeout(r, 100));
+    await fetchData();
   }
 
-  function handleSessionLogged() {
+  async function handleSessionLogged() {
     setSessionTaskId(null);
-    fetchData();
+    await new Promise((r) => setTimeout(r, 100));
+    await fetchData();
   }
 
   const pendingTasks = tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled");
