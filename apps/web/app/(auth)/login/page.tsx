@@ -38,33 +38,44 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[var(--bg-deep)] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo / wordmark */}
-        <div className="mb-8 text-center">
-          <span className="text-2xl font-semibold tracking-tight text-white">TISE</span>
-          <p className="mt-1 text-sm text-neutral-500">Temporal Intelligence Scheduling Engine</p>
+        {/* Logo */}
+        <div className="mb-10 text-center animate-fade-up">
+          <div
+            className="w-12 h-12 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, #6366f1, #818cf8)",
+              boxShadow: "0 8px 32px rgba(99,102,241,0.3)",
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <span className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">TISE</span>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">Temporal Intelligence Scheduling Engine</p>
         </div>
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+        <div className="animate-fade-up stagger-1 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl p-6">
           {/* Tab toggle */}
-          <div className="flex rounded-lg bg-neutral-800 p-1 mb-6">
+          <div className="flex rounded-xl bg-[var(--bg-elevated)] p-1 mb-6">
             <button
               onClick={() => setMode("signin")}
-              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 mode === "signin"
-                  ? "bg-white text-neutral-900"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-[var(--accent-indigo-bg)] text-[var(--accent-indigo)] border border-[var(--accent-indigo-border)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] border border-transparent"
               }`}
             >
               Sign in
             </button>
             <button
               onClick={() => setMode("signup")}
-              className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 mode === "signup"
-                  ? "bg-white text-neutral-900"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-[var(--accent-indigo-bg)] text-[var(--accent-indigo)] border border-[var(--accent-indigo-border)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] border border-transparent"
               }`}
             >
               Sign up
@@ -73,7 +84,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1.5">
+              <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1.5 tracking-wide">
                 Email
               </label>
               <input
@@ -82,11 +93,11 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-400 mb-1.5">
+              <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1.5 tracking-wide">
                 Password
               </label>
               <input
@@ -95,17 +106,17 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
               />
             </div>
 
             {error && (
-              <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+              <p className="text-xs text-[var(--red)] bg-[var(--red-bg)] border border-[var(--red-border)] rounded-xl px-3.5 py-2.5">
                 {error}
               </p>
             )}
             {message && (
-              <p className="text-xs text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-3 py-2">
+              <p className="text-xs text-[var(--emerald)] bg-[var(--emerald-bg)] border border-[var(--emerald-border)] rounded-xl px-3.5 py-2.5">
                 {message}
               </p>
             )}
@@ -113,7 +124,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium py-2 rounded-lg transition-colors"
+              className="w-full bg-gradient-to-r from-[var(--accent-indigo-solid-hover)] to-[var(--accent-indigo-solid)] hover:from-[#4338ca] hover:to-[var(--accent-indigo-solid-hover)] disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-xl transition-all duration-200"
             >
               {loading ? "..." : mode === "signin" ? "Sign in" : "Create account"}
             </button>

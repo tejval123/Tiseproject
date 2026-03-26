@@ -12,24 +12,37 @@ interface Props {
 }
 
 export function ConsequencePanel({ result, onAccept, onSoftDeadline, onUseSuggestedDate, onCancel, loading }: Props) {
-  const { tasksSlipping, tasksOnTime, deepWorkAffected, bufferCost, timeBankCanAbsorb, suggestedDate, consecutiveOverloadDays } = result;
+  const {
+    tasksSlipping,
+    tasksOnTime,
+    deepWorkAffected,
+    bufferCost,
+    timeBankCanAbsorb,
+    suggestedDate,
+    consecutiveOverloadDays,
+    adjustedEffort,
+  } = result;
 
   const isCritical = consecutiveOverloadDays >= 3;
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+    <div className="animate-scale-in bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className={`px-5 py-4 border-b border-neutral-800 ${isCritical ? "bg-red-500/10" : "bg-amber-500/5"}`}>
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{isCritical ? "⚠️" : "👁"}</span>
+      <div
+        className={`px-5 py-4 border-b border-[var(--border-subtle)] ${
+          isCritical ? "bg-[var(--red-bg)]" : "bg-[var(--amber-bg)]"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xl">{isCritical ? "⚠️" : "👁"}</span>
           <div>
-            <h3 className="text-sm font-semibold text-white">
-              {isCritical ? "Critical overload ahead" : "Here's what changes if you add this"}
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              {isCritical ? "Critical overload ahead" : "Here's what changes"}
             </h3>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
               {isCritical
                 ? `Your schedule is overloaded for ${consecutiveOverloadDays}+ consecutive days.`
-                : "Review the impact, then decide."}
+                : `${adjustedEffort}m adjusted effort — review the impact, then decide.`}
             </p>
           </div>
         </div>
@@ -39,16 +52,18 @@ export function ConsequencePanel({ result, onAccept, onSoftDeadline, onUseSugges
         {/* Tasks staying on time */}
         {tasksOnTime.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Stays on time</p>
+            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-2">
+              Stays on time
+            </p>
             <div className="space-y-1">
               {tasksOnTime.slice(0, 3).map((t) => (
                 <div key={t.taskId} className="flex items-center gap-2 text-sm">
-                  <span className="text-emerald-400 text-xs">✓</span>
-                  <span className="text-neutral-300 truncate">{t.title}</span>
+                  <span className="text-[var(--emerald)] text-xs">✓</span>
+                  <span className="text-[var(--text-secondary)] truncate">{t.title}</span>
                 </div>
               ))}
               {tasksOnTime.length > 3 && (
-                <p className="text-xs text-neutral-600">+{tasksOnTime.length - 3} more</p>
+                <p className="text-xs text-[var(--text-muted)]">+{tasksOnTime.length - 3} more</p>
               )}
             </div>
           </div>
@@ -57,12 +72,19 @@ export function ConsequencePanel({ result, onAccept, onSoftDeadline, onUseSugges
         {/* Tasks slipping */}
         {tasksSlipping.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">Slips</p>
-            <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-2">
+              Will slip
+            </p>
+            <div className="space-y-1.5">
               {tasksSlipping.map((t) => (
-                <div key={t.taskId} className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-300 truncate">{t.title}</span>
-                  <span className="text-amber-400 text-xs shrink-0 ml-2">+{t.slipDays}d</span>
+                <div
+                  key={t.taskId}
+                  className="flex items-center justify-between text-sm px-3 py-2 rounded-xl bg-[var(--amber-bg)] border border-[var(--amber-border)]"
+                >
+                  <span className="text-[var(--text-secondary)] truncate">{t.title}</span>
+                  <span className="mono text-xs font-semibold text-[var(--amber)] shrink-0 ml-2">
+                    +{t.slipDays}d
+                  </span>
                 </div>
               ))}
             </div>
@@ -72,22 +94,22 @@ export function ConsequencePanel({ result, onAccept, onSoftDeadline, onUseSugges
         {/* Summary chips */}
         <div className="flex flex-wrap gap-2 pt-1">
           {deepWorkAffected && (
-            <span className="text-xs bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-medium bg-[var(--violet-bg)] border border-[var(--violet-border)] text-[var(--violet)] px-2.5 py-1 rounded-full">
               Deep work affected
             </span>
           )}
           {timeBankCanAbsorb && (
-            <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-medium bg-[var(--emerald-bg)] border border-[var(--emerald-border)] text-[var(--emerald)] px-2.5 py-1 rounded-full">
               Time Bank can cover this
             </span>
           )}
           {bufferCost > 0 && (
-            <span className="text-xs bg-neutral-800 border border-neutral-700 text-neutral-400 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-medium bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] px-2.5 py-1 rounded-full">
               Uses {bufferCost}m buffer
             </span>
           )}
           {suggestedDate && (
-            <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2.5 py-1 rounded-full">
+            <span className="text-[11px] font-medium bg-[var(--accent-indigo-bg)] border border-[var(--accent-indigo-border)] text-[var(--accent-indigo)] px-2.5 py-1 rounded-full">
               Fits by {suggestedDate}
             </span>
           )}
@@ -95,20 +117,20 @@ export function ConsequencePanel({ result, onAccept, onSoftDeadline, onUseSugges
       </div>
 
       {/* Actions */}
-      <div className="px-5 py-4 border-t border-neutral-800 space-y-2">
+      <div className="px-5 py-4 border-t border-[var(--border-subtle)] space-y-2">
         <button
           onClick={onAccept}
           disabled={loading}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+          className="w-full bg-gradient-to-r from-[var(--accent-indigo-solid-hover)] to-[var(--accent-indigo-solid)] hover:from-[#4338ca] hover:to-[var(--accent-indigo-solid-hover)] disabled:opacity-50 text-white text-sm font-semibold py-3 rounded-xl transition-all duration-200"
         >
-          Accept the trade-off
+          {loading ? "Saving..." : "Accept the trade-off"}
         </button>
         <div className="grid grid-cols-2 gap-2">
           {suggestedDate && (
             <button
               onClick={onUseSuggestedDate}
               disabled={loading}
-              className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-2 rounded-lg transition-colors"
+              className="bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-xs font-medium py-2.5 rounded-xl transition-colors"
             >
               Use {suggestedDate}
             </button>
@@ -116,14 +138,14 @@ export function ConsequencePanel({ result, onAccept, onSoftDeadline, onUseSugges
           <button
             onClick={onSoftDeadline}
             disabled={loading}
-            className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium py-2 rounded-lg transition-colors"
+            className="bg-[var(--bg-elevated)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-xs font-medium py-2.5 rounded-xl transition-colors"
           >
             Mark flexible
           </button>
         </div>
         <button
           onClick={onCancel}
-          className="w-full text-neutral-600 hover:text-neutral-400 text-xs font-medium py-1.5 transition-colors"
+          className="w-full text-[var(--text-muted)] hover:text-[var(--text-tertiary)] text-xs font-medium py-2 transition-colors"
         >
           Cancel
         </button>

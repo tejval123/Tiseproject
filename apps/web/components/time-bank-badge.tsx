@@ -2,17 +2,25 @@
 
 interface Props {
   minutes: number;
+  showLabel?: boolean;
 }
 
-export function TimeBankBadge({ minutes }: Props) {
+export function TimeBankBadge({ minutes, showLabel = true }: Props) {
+  const active = minutes > 0;
+
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-      minutes > 0
-        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-        : "bg-neutral-800 border-neutral-700 text-neutral-500"
-    }`}>
-      <span className="text-base leading-none">⏱</span>
-      <span>Time Bank: {minutes > 0 ? `${minutes} min` : "empty"}</span>
+    <div
+      className={`animate-float flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 ${
+        active
+          ? "bg-[var(--emerald-bg)] border-[var(--emerald-border)] text-[var(--emerald)]"
+          : "bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-muted)]"
+      }`}
+    >
+      <span className="text-sm leading-none">⏱</span>
+      {showLabel && <span>Time Bank:</span>}
+      <span className="mono font-semibold">
+        {active ? `${minutes}m` : "empty"}
+      </span>
     </div>
   );
 }
