@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { TimeBankBadge } from "../../../components/time-bank-badge";
 import { TaskCard } from "../../../components/task-card";
-import { AddTaskModal } from "../../../components/add-task-modal";
+import { AddTaskModal, type CreatedTask } from "../../../components/add-task-modal";
 import { LogSessionModal } from "../../../components/log-session-modal";
 
 interface Task {
@@ -100,11 +100,10 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleTaskAdded() {
+  function handleTaskAdded(task: CreatedTask) {
+    // Immediately add the new task to local state — no refetch needed
+    setTasks((prev) => [...prev, task]);
     setShowAddModal(false);
-    // Wait for modal to unmount before re-fetching to avoid state conflicts
-    await new Promise((r) => setTimeout(r, 100));
-    await fetchData();
   }
 
   async function handleSessionLogged() {

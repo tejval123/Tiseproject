@@ -12,9 +12,20 @@ const TASK_TYPES = [
   { value: "habit", label: "Habit", icon: "\u{1F504}" },
 ];
 
+export interface CreatedTask {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  estimated_minutes: number;
+  deadline_date: string;
+  is_fixed: boolean;
+  is_soft_deadline: boolean;
+}
+
 interface Props {
   onClose: () => void;
-  onTaskAdded: () => void;
+  onTaskAdded: (task: CreatedTask) => void;
 }
 
 type Step = "form" | "computing" | "consequence" | "saving";
@@ -66,7 +77,7 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
       const data = await res.json();
       setConsequence(data);
       setStep("consequence");
-    } catch (err) {
+    } catch {
       setError("Network error — please try again");
       setStep("form");
     }
@@ -94,17 +105,25 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
       });
 
       if (res.ok) {
-        // Small delay to ensure DB write is committed before re-fetch
-        await new Promise((r) => setTimeout(r, 300));
-        onTaskAdded();
-        // onTaskAdded already closes the modal via parent
+        const taskData = await res.json();
+        // Pass the created task directly to the parent — no refetch needed
+        onTaskAdded({
+          id: taskData.id,
+          title: taskData.title,
+          type: taskData.type,
+          status: taskData.status,
+          estimated_minutes: taskData.estimated_minutes,
+          deadline_date: taskData.deadline_date,
+          is_fixed: taskData.is_fixed,
+          is_soft_deadline: taskData.is_soft_deadline,
+        });
       } else {
         const errData = await res.json().catch(() => ({}));
         setError(errData.error ?? "Failed to save task");
         setStep("consequence");
         setSaving(false);
       }
-    } catch (err) {
+    } catch {
       setError("Network error — please try again");
       setStep("consequence");
       setSaving(false);
