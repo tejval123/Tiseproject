@@ -6,10 +6,10 @@ import { ConsequencePanel } from "./consequence-panel";
 import type { ConsequenceResult } from "@repo/core";
 
 const TASK_TYPES = [
-  { value: "standard", label: "Standard", icon: "📋" },
-  { value: "deep_work", label: "Deep Work", icon: "🧠" },
-  { value: "admin", label: "Admin", icon: "📎" },
-  { value: "habit", label: "Habit", icon: "🔄" },
+  { value: "standard", label: "Standard", icon: "\u{1F4CB}" },
+  { value: "deep_work", label: "Deep Work", icon: "\u{1F9E0}" },
+  { value: "admin", label: "Admin", icon: "\u{1F4CE}" },
+  { value: "habit", label: "Habit", icon: "\u{1F504}" },
 ];
 
 interface Props {
@@ -47,48 +47,77 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
     const auth = await getAuthHeader();
     if (!auth) { setError("Not authenticated"); setStep("form"); return; }
 
-    const res = await fetch("/api/consequence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: auth },
-      body: JSON.stringify({
-        newTask: { type, estimatedMinutes: totalMinutes, deadlineDate: deadline },
-      }),
-    });
+    try {
+      const res = await fetch("/api/consequence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: auth },
+        body: JSON.stringify({
+          newTask: { type, estimatedMinutes: totalMinutes, deadlineDate: deadline },
+        }),
+      });
 
-    if (!res.ok) { setError("Failed to compute consequence"); setStep("form"); return; }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error ?? "Failed to compute consequence");
+        setStep("form");
+        return;
+      }
 
-    const data = await res.json();
-    setConsequence(data);
-    setStep("consequence");
+      const data = await res.json();
+      setConsequence(data);
+      setStep("consequence");
+    } catch (err) {
+      setError("Network error — please try again");
+      setStep("form");
+    }
   }
 
   async function commitTask(opts: { isSoftDeadline: boolean; deadlineOverride?: string }) {
     setSaving(true);
     setStep("saving");
-    const auth = await getAuthHeader();
-    if (!auth) return;
 
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: auth },
-      body: JSON.stringify({
-        title,
-        type,
-        estimatedMinutes: totalMinutes,
-        deadlineDate: opts.deadlineOverride ?? deadline,
-        isSoftDeadline: opts.isSoftDeadline,
-        isFixed: false,
-      }),
-    });
+    try {
+      const auth = await getAuthHeader();
+      if (!auth) { setError("Not authenticated"); setStep("form"); setSaving(false); return; }
 
-    if (res.ok) { onTaskAdded(); onClose(); }
-    else { setError("Failed to save task"); setStep("consequence"); setSaving(false); }
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: auth },
+        body: JSON.stringify({
+          title,
+          type,
+          estimatedMinutes: totalMinutes,
+          deadlineDate: opts.deadlineOverride ?? deadline,
+          isSoftDeadline: opts.isSoftDeadline,
+          isFixed: false,
+        }),
+      });
+
+      if (res.ok) {
+        // Small delay to ensure DB write is committed before re-fetch
+        await new Promise((r) => setTimeout(r, 300));
+        onTaskAdded();
+        // onTaskAdded already closes the modal via parent
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error ?? "Failed to save task");
+        setStep("consequence");
+        setSaving(false);
+      }
+    } catch (err) {
+      setError("Network error — please try again");
+      setStep("consequence");
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={(e) => { if (e.target === e.currentTarget && step === "form") onClose(); }}
+    >
       <div className="w-full max-w-md">
-        {/* ── Form ── */}
+        {/* -- Form -- */}
         {step === "form" && (
           <div className="animate-slide-up bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between">
@@ -115,6 +144,7 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="What needs to get done?"
+                  autoFocus
                   className="w-full bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-xl px-3.5 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
                 />
               </div>
@@ -198,7 +228,7 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
 
               <button
                 type="submit"
-                disabled={totalMinutes < 5 || !deadline}
+                disabled={totalMinutes < 5 || !deadline || !title.trim()}
                 className="w-full bg-gradient-to-r from-[var(--accent-indigo-solid-hover)] to-[var(--accent-indigo-solid)] hover:from-[#4338ca] hover:to-[var(--accent-indigo-solid-hover)] disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -211,7 +241,7 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
           </div>
         )}
 
-        {/* ── Computing animation ── */}
+        {/* -- Computing animation -- */}
         {step === "computing" && (
           <div className="animate-scale-in bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl px-5 py-12 text-center">
             <div className="w-12 h-12 mx-auto mb-5 rounded-2xl bg-[var(--accent-indigo-bg)] border border-[var(--accent-indigo-border)] flex items-center justify-center animate-pulse">
@@ -236,12 +266,12 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
           </div>
         )}
 
-        {/* ── Consequence ── */}
+        {/* -- Consequence -- */}
         {step === "consequence" && consequence && (
           <div>
             <div className="mb-3 px-1 flex items-center justify-between">
               <button
-                onClick={() => setStep("form")}
+                onClick={() => { setStep("form"); setError(null); }}
                 className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors flex items-center gap-1.5"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -249,7 +279,7 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
                 </svg>
                 Back
               </button>
-              <span className="text-xs text-[var(--text-muted)] truncate max-w-[200px]">"{title}"</span>
+              <span className="text-xs text-[var(--text-muted)] truncate max-w-[200px]">&ldquo;{title}&rdquo;</span>
             </div>
             <ConsequencePanel
               result={consequence}
@@ -264,9 +294,12 @@ export function AddTaskModal({ onClose, onTaskAdded }: Props) {
           </div>
         )}
 
-        {/* ── Saving ── */}
+        {/* -- Saving -- */}
         {step === "saving" && (
           <div className="animate-scale-in bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl px-5 py-10 text-center">
+            <div className="w-10 h-10 mx-auto mb-4 rounded-xl bg-[var(--accent-indigo-bg)] border border-[var(--accent-indigo-border)] flex items-center justify-center">
+              <div className="w-5 h-5 border-2 border-[var(--accent-indigo)] border-t-transparent rounded-full animate-spin" />
+            </div>
             <p className="text-sm text-[var(--text-secondary)]">Saving task and updating schedule...</p>
           </div>
         )}

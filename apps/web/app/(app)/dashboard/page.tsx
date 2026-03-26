@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { TimeBankBadge } from "../../../components/time-bank-badge";
@@ -38,57 +38,74 @@ export default function DashboardPage() {
   const [systemMode, setSystemMode] = useState<string>("warm_start");
   const [capacityMinutes, setCapacityMinutes] = useState(480);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { router.push("/login"); return; }
-      fetchData();
-    });
-  }, []);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     const auth = await getAuthHeader();
     if (!auth) { router.push("/login"); return; }
 
     const today = new Date().toISOString().split("T")[0]!;
 
-    const [tasksRes, bankRes, profileRes] = await Promise.all([
-      fetch("/api/tasks", { headers: { Authorization: auth } }),
-      supabase.from("time_bank").select("balance_minutes").eq("date", today).maybeSingle(),
-      supabase.from("capacity_profiles").select("system_mode, weekday_minutes, weekend_minutes").maybeSingle(),
-    ]);
+    try {
+      const [tasksRes, bankRes, profileRes] = await Promise.all([
+        fetch("/api/tasks", { headers: { Authorization: auth } }),
+        supabase.from("time_bank").select("balance_minutes").eq("date", today).maybeSingle(),
+        supabase.from("capacity_profiles").select("system_mode, weekday_minutes, weekend_minutes").maybeSingle(),
+      ]);
 
-    if (tasksRes.ok) {
-      const data = await tasksRes.json();
-      setTasks(data ?? []);
-    }
+      if (tasksRes.ok) {
+        const data = await tasksRes.json();
+        setTasks(data ?? []);
+      }
 
-    setTimeBankMinutes(bankRes.data?.balance_minutes ?? 0);
+      setTimeBankMinutes(bankRes.data?.balance_minutes ?? 0);
 
-    if (profileRes.data?.system_mode) {
-      setSystemMode(profileRes.data.system_mode);
-      const dow = new Date().getDay();
-      const declared = dow === 0 || dow === 6
-        ? profileRes.data.weekend_minutes
-        : profileRes.data.weekday_minutes;
-      setCapacityMinutes(declared);
-    } else {
-      router.push("/onboarding");
-      return;
+      if (profileRes.data?.system_mode) {
+        setSystemMode(profileRes.data.system_mode);
+        const dow = new Date().getDay();
+        const declared = dow === 0 || dow === 6
+          ? profileRes.data.weekend_minutes
+          : profileRes.data.weekday_minutes;
+        setCapacityMinutes(declared);
+      } else {
+        router.push("/onboarding");
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
     }
 
     setLoading(false);
-  }
+  }, [router]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { router.push("/login"); return; }
+      fetchData();
+    });
+  }, [fetchData, router]);
 
   async function handleComplete(taskId: string) {
     const auth = await getAuthHeader();
     if (!auth) return;
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Optimistic update
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: "completed" } : t));
+
     await supabase.from("tasks").update({ status: "completed" }).eq("id", taskId);
     if (user) {
       await supabase.rpc("increment_completed_task_count", { uid: user.id });
     }
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: "completed" } : t));
+  }
+
+  function handleTaskAdded() {
+    setShowAddModal(false);
+    fetchData();
+  }
+
+  function handleSessionLogged() {
+    setSessionTaskId(null);
+    fetchData();
   }
 
   const pendingTasks = tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled");
@@ -232,7 +249,7 @@ export default function DashboardPage() {
       {showAddModal && (
         <AddTaskModal
           onClose={() => setShowAddModal(false)}
-          onTaskAdded={() => { setShowAddModal(false); fetchData(); }}
+          onTaskAdded={handleTaskAdded}
         />
       )}
       {sessionTaskId && (
@@ -240,7 +257,7 @@ export default function DashboardPage() {
           taskId={sessionTaskId}
           task={tasks.find((t) => t.id === sessionTaskId)!}
           onClose={() => setSessionTaskId(null)}
-          onLogged={() => { setSessionTaskId(null); fetchData(); }}
+          onLogged={handleSessionLogged}
         />
       )}
     </div>
